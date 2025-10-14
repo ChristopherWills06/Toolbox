@@ -3,9 +3,10 @@ import sys
 from functools import partial
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow
+from PySide6.QtGui import QColor
 
 # Create buttons
-class ColorPresets(QWidget):
+class ColorPresets(QWidget, QColor):
     def __init__ (self, parent = None):
         super(ColorPresets, self).__init__(parent)
 
@@ -15,10 +16,14 @@ class ColorPresets(QWidget):
 
         self.button = QPushButton("Button")
         self.button.setCheckable(True)
+        self.button.setStyleSheet("background-color : cyan")
+       # self.button.setCurrentColor (fromString(blue)) HOW DOES THIS WORK
 
         self.button.clicked.connect(self.buttonClicked)
 
         self.main_window.setCentralWidget(self.button)
+
+        #assign colours to the buttons
 
     def buttonClicked(Self, checked):
         unreal.log ('BUTTON CLICKED')
@@ -39,9 +44,3 @@ def launchWindow():
     ColorPresets.window.show()
     unreal.parent_external_window_to_slate(ColorPresets.window.winId())
 launchWindow()
-
-# Assign colours to buttons
-
-
-
-# Button functionality (Hex code copied upon push)

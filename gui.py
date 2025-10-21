@@ -39,3 +39,6 @@ window.setObjectName("Toolbox Window")
 window.setWindowTitle("Unreal Toolbox")
 window.show()
 unreal.parent_external_window_to_slate(window.winId())
+
+
+# edit.setAcceptDrops(True) <-- Drag and dropper

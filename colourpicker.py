@@ -2,7 +2,7 @@ import unreal
 import sys
 from functools import partial
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QGuiApplication, QColor, QCursor, QClipboard
+from PySide6.QtGui import QGuiApplication, QColor, QCursor, QClipboard, QPainter
 from PySide6.QtWidgets import (
     QApplication, QWidget, QPushButton, QMainWindow, QColorDialog, QVBoxLayout, QLabel, QVBoxLayout
 )
@@ -33,11 +33,14 @@ class ColorPicker(QWidget):
         self.btn2.setCheckable(False)
         self.btn2.setStyleSheet("background-color: orange; font-weight: bold; font-size: 14px;")
 
+        self.setLayout(layout)
+
         # Button to Picker Connection
         self.button.clicked.connect(self.open_color_picker)
         self.btn2.clicked.connect(self.open_color_picker)
 
         layout.addWidget(self.button)
+        layout.addWidget(self.btn2)
  
     def open_color_picker(self):
         """Opens a QColorDialog and updates button color"""
@@ -125,6 +128,80 @@ class Eyedropper(QWidget):
 
 ######################################################
 ######################################################
+
+COLOURBLIND_MATRICES = {
+    "Protanopia": [
+        [0.56667, 0.43333, 0.0],
+        [0.55833, 0.44167, 0.0],
+        [0.0,      0.24167, 0.75833]
+    ],
+    "Deuteranopia": [
+        [0.625, 0.375, 0.0],
+        [0.7,   0.3,   0.0],
+        [0.0,   0.3,   0.7]
+    ],
+    "Tritanopia": [
+        [0.95,  0.05,  0.0],
+        [0.0,   0.43333, 0.56667],
+        [0.0,   0.475, 0.525]
+    ]
+}
+        
+def simulate_colour_blind(rgb_tuple, matrix):
+    #apply matrice to colour
+    r, g, b = [c /255.0 for c in rgb_tuple]
+    r_new = r * matrix[0][0] + g * matrix[0][1] + b * matrix[0][2]
+    g_new = r * matrix[1][0] + g * matrix[1][1] + b * matrix[1][2]
+    b_new = r * matrix[2][0] + g * matrix[2][1] + b * matrix[2][2]
+    return tuple(max(0, min(255, int(c * 255))) for c in (r_new, b_new, g_new))
+
+class ColourBlindChecker(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Colourblind Checker")
+        self.resize(400,300)
+
+        self.original_colour = QColor(255, 0, 0)
+
+        layout = QVBoxLayout()
+        self.label = QLabel("True Colour")
+
+        self.pick_button = QPushButton("Choose Colour")
+        self.pick_button.clicked.connect(self.choose_colour)
+
+        layout.addWidget(self.label)
+        layout.addWidget(self.pick_button)
+
+        self.setLayout(layout)
+
+    def choose_colour(self):
+        colour = QColorDialog.getColor(self.original_colour, self, "Select Colour")
+        if colour.isValid():
+            self.original_colour = colour
+            self.update()
+
+    def simulate_colours(self):
+        painter = QPainter(self)
+
+        #original colour
+        painter.fillRect(20, 60, 100, 100, self.original_colour)
+        painter.drawText(20, 180, "Original")
+
+        #simulated colour boxes
+        x_offset = 140
+        for name, matrix in COLOURBLIND_MATRICES.items():
+            sim_rgb = simulate_colour_blind(
+                {self.original_colour.red(),
+                self.original_colour.green(),
+                self.original_colour.blue()},
+                matrix
+            )
+            painter.fillRect(x_offset, 60, 100, 100, QColor(*sim_rgb))
+            painter.drawText(x_offset, 180, name)
+            x_offset += 120
+
+######################################################
+######################################################
  
 def launchWindow():
     # Destroy old window if already open
@@ -144,12 +221,18 @@ def launchWindow():
 
     Eyedropper.window = Eyedropper()
     Eyedropper.window.setObjectName("toolWindow")
-    Eyedropper.window.setWindowTitle("Color Preset")
+    Eyedropper.window.setWindowTitle("Eyedropper")
     Eyedropper.window.show()
+
+    ColourBlindChecker.window = ColourBlindChecker()
+    ColourBlindChecker.window.setObjectName("toolWindow")
+    ColourBlindChecker.window.setWindowTitle("Colourblind Checker")
+    ColourBlindChecker.window.show()
  
     # Attach to Unreal's main window
     unreal.parent_external_window_to_slate(ColorPicker.window.winId())
     unreal.parent_external_window_to_slate(Eyedropper.window.winId())
+    unreal.parent_external_window_to_slate(ColourBlindChecker.window.winId())
  
 # Run it
 launchWindow()
